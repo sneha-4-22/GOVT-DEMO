@@ -475,12 +475,7 @@ function App() {
         )}
       </main>
       
-      {/* Footer */}
-      <footer className="p-4 bg-gray-800 shadow-inner mt-auto">
-        <div className="container mx-auto text-center text-sm text-gray-400">
-          <p>YouTube Comment Analyzer © 2025 | Built with React, TailwindCSS & Recharts</p>
-        </div>
-      </footer>
+      
     </div>
   );
 }
