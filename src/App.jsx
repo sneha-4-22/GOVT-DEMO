@@ -6,6 +6,7 @@ import {
   Search, Download, Youtube, MessageSquare, ThumbsUp, 
   Eye, Calendar, User, Clock, RefreshCw, AlertTriangle 
 } from 'lucide-react';
+import LandingPage from './LandingPage'; // Import the new LandingPage component
 
 function App() {
   const [videoUrl, setVideoUrl] = useState('');
@@ -17,6 +18,7 @@ function App() {
   const [sentimentData, setSentimentData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [csvPath, setCsvPath] = useState('');
+  const [showLanding, setShowLanding] = useState(true); // New state to control landing page visibility
   
   const COLORS = ['#10B981', '#6B7280', '#EF4444'];
   const SENTIMENT_LABELS = {
@@ -25,6 +27,11 @@ function App() {
     'Negative': '#EF4444'
   };
   const API_URL = 'https://yt-comments-production.up.railway.app';
+  
+  // Handler for the "Get Started" button on landing page
+  const handleGetStarted = () => {
+    setShowLanding(false);
+  };
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -143,6 +150,12 @@ function App() {
     return null;
   };
   
+  // If showLanding is true, show the landing page
+  if (showLanding) {
+    return <LandingPage onGetStarted={handleGetStarted} />;
+  }
+  
+  // Otherwise, show the main application
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
