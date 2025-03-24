@@ -3,7 +3,7 @@ import {
   BarChart3, TrendingUp, Lightbulb, ArrowRight, ChevronRight,
   MessageSquare, Search, Download, Youtube 
 } from 'lucide-react';
-
+import dashboardPreview from './image.png';
 const LandingPage = ({ onGetStarted }) => {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -72,11 +72,10 @@ const LandingPage = ({ onGetStarted }) => {
             <div className="lg:w-1/2 relative z-10">
               <div className="relative bg-gray-800 p-4 rounded-lg shadow-xl">
                 <div className="absolute -top-2 left-4 right-4 h-2 bg-red-600 rounded-t-lg"></div>
-                <img 
-                  src="/api/placeholder/600/400" 
-                  alt="Dashboard preview" 
-                  className="w-full h-auto rounded border border-gray-700"
-                />
+               
+
+<img src={dashboardPreview} alt="Dashboard preview" className="w-full h-auto rounded border border-gray-700" />
+
                 <div className="absolute -bottom-4 right-8 transform rotate-12 bg-gray-800 p-3 rounded shadow-lg border border-gray-700">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
