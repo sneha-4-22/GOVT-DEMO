@@ -1,7 +1,7 @@
-# **YTScan – The YouTube Comment Decoder You Didn’t Know You Needed 🚀**
+# **YTScan – The YouTube Comment Decoder You Didn’t Know You Needed **
 
 <p align="center">
-  <img src="image.png" alt="YTScan Logo" width="200">
+  <img src="image.png" alt="YTScan Logo" width="500">
 </p>
 
 Big YouTubers don’t have time to scroll through a tsunami of comments—so let **YTScan** do the heavy lifting! It **analyzes comments, detects trends, and spills the tea on what your audience actually thinks** in seconds. No more guessing, just straight-up insights. 💡
