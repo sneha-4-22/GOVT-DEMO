@@ -1,4 +1,4 @@
-# **YTScan – The YouTube Comment Decoder You Didn’t Know You Needed **
+# **YTScan – The YouTube Comment Decoder You Didn’t Know You Needed**
 
 <p align="center">
   <img src="image.png" alt="YTScan Logo" width="500">
