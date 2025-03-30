@@ -18,7 +18,7 @@ function App() {
   const [sentimentData, setSentimentData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [csvPath, setCsvPath] = useState('');
-  const [showLanding, setShowLanding] = useState(true); // New state to control landing page visibility
+  const [showLanding, setShowLanding] = useState(true); 
   
   const COLORS = ['#10B981', '#6B7280', '#EF4444'];
   const SENTIMENT_LABELS = {
@@ -27,8 +27,7 @@ function App() {
     'Negative': '#EF4444'
   };
   const API_URL = 'https://yt-comments-production.up.railway.app';
-  
-  // Handler for the "Get Started" button on landing page
+
   const handleGetStarted = () => {
     setShowLanding(false);
   };
