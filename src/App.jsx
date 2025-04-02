@@ -6,7 +6,7 @@ import {
   Search, Download, Youtube, MessageSquare, ThumbsUp, 
   Eye, Calendar, User, Clock, RefreshCw, AlertTriangle 
 } from 'lucide-react';
-import LandingPage from './LandingPage'; // Import the new LandingPage component
+import LandingPage from './components/LandingPage'; // Import the LandingPage component
 
 function App() {
   const [videoUrl, setVideoUrl] = useState('');
@@ -17,7 +17,7 @@ function App() {
   const [analysis, setAnalysis] = useState(null);
   const [sentimentData, setSentimentData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [csvPath, setCsvPath] = useState('');
+  const [csvContent, setCsvContent] = useState('');
   const [showLanding, setShowLanding] = useState(true); 
   
   const COLORS = ['#10B981', '#6B7280', '#EF4444'];
@@ -26,7 +26,11 @@ function App() {
     'Neutral': '#6B7280',
     'Negative': '#EF4444'
   };
-  const API_URL = 'https://yt-comments-production.up.railway.app';
+  
+  // Update this to your Express server URL
+  const API_URL = 'http://localhost:5000';
+  // For production deployment, use your Railway URL:
+  // const API_URL = 'https://your-railway-deployed-express-app.up.railway.app';
 
   const handleGetStarted = () => {
     setShowLanding(false);
@@ -67,7 +71,7 @@ function App() {
       setComments(data.comments);
       setAnalysis(data.analysis);
       setSentimentData(data.sentimentData);
-      setCsvPath(data.csvPath);
+      setCsvContent(data.csvContent);
       
     } catch (err) {
       setError(err.message || 'Failed to fetch data. Please try again.');
@@ -77,6 +81,7 @@ function App() {
     }
   };
 
+  // Client-side CSV generation (backup method)
   const downloadCommentsAsCsv = () => {
     if (comments.length === 0) return;
     
@@ -113,10 +118,56 @@ function App() {
     URL.revokeObjectURL(url); // Clean up memory
   };
   
-  const downloadCsv = () => {
-    if (csvPath) {
-      window.open(`${API_URL}/download/${csvPath}`, '_blank');
+  // Server-side CSV download
+  const downloadCsvFromServer = async () => {
+    if (!csvContent) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/download-csv`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          csvContent,
+          videoId: videoDetails ? extractVideoId(videoUrl) : 'comments'
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download CSV');
+      }
+      
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create object URL for the blob
+      const url = URL.createObjectURL(blob);
+      
+      // Create a link and trigger download
+      const a = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '');
+      a.href = url;
+      a.download = `youtube_comments_${timestamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading CSV:', err);
+      // Fall back to client-side download if server download fails
+      downloadCommentsAsCsv();
     }
+  };
+
+  // Helper function to extract video ID
+  const extractVideoId = (url) => {
+    const pattern = /(?:v=|\/)([0-9A-Za-z_-]{11}).*/;
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
+    return null;
   };
   
   const filteredComments = comments.filter(comment => 
@@ -326,7 +377,7 @@ function App() {
                   </div>
                 </div>
                 
-                {/* Second row: Feedback content that spans full width for more space */}
+                {/* Rest of AI Insights Section - same as original */}
                 <div className="grid grid-cols-1 gap-6">
                   {/* Feedback */}
                   <div>
@@ -376,6 +427,7 @@ function App() {
                     
                     {/* Impact Analysis & Viewer Suggestions - Full width for more details */}
                     <div className="space-y-4">
+                      {/* Impact Analysis */}
                       {/* Impact Analysis */}
                       {analysis.negativeFeedback && analysis.negativeFeedback.impact && (
                         <div className="p-4 rounded bg-red-900/20 border border-red-800">
