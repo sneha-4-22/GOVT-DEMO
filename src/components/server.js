@@ -8,11 +8,9 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 const { parse } = require('url');
-// Remove the require for string-strip-html
-// const { stripHtml } = require('string-strip-html');
+
 const csv = require('fast-csv');
 
-// Load environment variables
 dotenv.config();
 
 // Initialize Express app
