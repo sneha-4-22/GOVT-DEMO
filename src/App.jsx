@@ -6,8 +6,7 @@ import {
   Search, Download, Youtube, MessageSquare, ThumbsUp, 
   Eye, Calendar, User, Clock, RefreshCw, AlertTriangle 
 } from 'lucide-react';
-import LandingPage from './components/LandingPage'; // Import the LandingPage component
-
+import LandingPage from './components/LandingPage'; 
 function App() {
   const [videoUrl, setVideoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,10 +26,7 @@ function App() {
     'Negative': '#EF4444'
   };
   
-  // Update this to your Express server URL
-  const API_URL = 'http://localhost:5000';
-  // For production deployment, use your Railway URL:
-  // const API_URL = 'https://your-railway-deployed-express-app.up.railway.app';
+  const API_URL = 'https://musingbg.everydayseries.io';
 
   const handleGetStarted = () => {
     setShowLanding(false);
@@ -38,8 +34,6 @@ function App() {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate URL
     if (!videoUrl || (!videoUrl.includes('youtube.com/') && !videoUrl.includes('youtu.be/'))) {
       setError('Please enter a valid YouTube URL');
       return;
