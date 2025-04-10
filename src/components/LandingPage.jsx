@@ -1,10 +1,24 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 import { 
   BarChart3, TrendingUp, Lightbulb, ArrowRight, ChevronRight,
   MessageSquare, Search, Download, Youtube 
 } from 'lucide-react';
 import dashboardPreview from './image.png';
-const LandingPage = ({ onGetStarted }) => {
+
+const LandingPage = () => {
+  const navigate = useNavigate();
+  const user = useUser();
+
+  const onGetStarted = () => {
+    if (user.current) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
@@ -14,12 +28,31 @@ const LandingPage = ({ onGetStarted }) => {
             <Youtube className="text-red-600" />
             <h1 className="text-xl font-bold">YouTube Comment Analyzer</h1>
           </div>
-          <button 
-            onClick={onGetStarted}
-            className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 transition flex items-center gap-2"
-          >
-            Get Started <ArrowRight size={16} />
-          </button>
+          <div className="flex items-center space-x-4">
+            {user.current ? (
+              <button 
+                onClick={() => navigate('/dashboard')}
+                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 transition flex items-center gap-2"
+              >
+                Dashboard <ArrowRight size={16} />
+              </button>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="px-3 py-1 text-white hover:text-red-400 transition"
+                >
+                  Login
+                </button>
+                <button 
+                  onClick={onGetStarted}
+                  className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 transition flex items-center gap-2"
+                >
+                  Get Started <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       
@@ -72,10 +105,7 @@ const LandingPage = ({ onGetStarted }) => {
             <div className="lg:w-1/2 relative z-10">
               <div className="relative bg-gray-800 p-4 rounded-lg shadow-xl">
                 <div className="absolute -top-2 left-4 right-4 h-2 bg-red-600 rounded-t-lg"></div>
-               
-
-<img src={dashboardPreview} alt="Dashboard preview" className="w-full h-auto rounded border border-gray-700" />
-
+                <img src={dashboardPreview} alt="Dashboard preview" className="w-full h-auto rounded border border-gray-700" />
                 <div className="absolute -bottom-4 right-8 transform rotate-12 bg-gray-800 p-3 rounded shadow-lg border border-gray-700">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
