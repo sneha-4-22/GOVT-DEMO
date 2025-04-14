@@ -26,7 +26,7 @@ const LandingPage = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Youtube className="text-red-600" />
-            <h1 className="text-xl font-bold">YouTube Comment Analyzer</h1>
+            <h1 className="text-xl font-bold">Audience Lens</h1>
           </div>
           <div className="flex items-center space-x-4">
             {user.current ? (
@@ -261,9 +261,9 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 text-center">
           <div className="flex justify-center items-center mb-4">
             <Youtube className="text-red-600 mr-2" />
-            <h2 className="text-xl font-bold">YouTube Comment Analyzer</h2>
+            <h2 className="text-xl font-bold">Audience Lens</h2>
           </div>
-          <p className="text-gray-400">© 2025 YouTube Comment Analyzer. All rights reserved.</p>
+          <p className="text-gray-400">© 2025 Audience Lens. All rights reserved.</p>
         </div>
       </footer>
     </div>

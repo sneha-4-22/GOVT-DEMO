@@ -278,7 +278,7 @@ function Dashboard() {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Youtube className="text-red-600" />
-            <h1 className="text-xl font-bold">YouTube Comment Analyzer</h1>
+            <h1 className="text-xl font-bold">Audience Lens</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-400">
@@ -617,69 +617,28 @@ function Dashboard() {
           </>
         )}
 
-        {/* Help & Information Section */}
+        {/* Empty State - When no video is analyzed yet */}
         {!videoDetails && (
-          <div className="p-6 rounded-lg shadow-md bg-gray-800">
-            <div className="flex items-center gap-2 mb-4">
-              <HelpCircle className="text-blue-500" />
-              <h2 className="text-xl font-bold">How to Use</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="rounded bg-gray-700 p-4">
-                <h3 className="font-medium text-lg mb-2">Getting Started</h3>
-                <ol className="list-decimal list-inside space-y-2 text-gray-300">
-                  <li>Paste a YouTube video URL in the input field above</li>
-                  <li>Click the "Analyze" button to process the video's comments</li>
-                  <li>View sentiment analysis, key themes, and viewer feedback</li>
-                  <li>Search through comments or download them as a CSV file</li>
-                </ol>
-              </div>
-              
-              <div className="rounded bg-gray-700 p-4">
-                <h3 className="font-medium text-lg mb-2">Usage Limits</h3>
-                <p className="text-gray-300 mb-2">
-                  You can analyze up to <strong>3 videos per day</strong> with your account.
-                </p>
-                <p className="text-gray-300">
-                  Usage limits reset at midnight UTC. Currently you have 
-                  <strong> {dailyUsage.remaining} analyses</strong> remaining today.
-                </p>
-              </div>
-              
-              <div className="rounded bg-gray-700 p-4">
-                <h3 className="font-medium text-lg mb-2">Analytics Features</h3>
-                <ul className="space-y-2 text-gray-300">
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    Sentiment analysis of viewer comments (positive, neutral, negative)
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    Identification of key themes and frequently asked questions
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    Summary of positive feedback and areas for improvement
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    Detailed viewer suggestions with implementation strategies
-                  </li>
-                </ul>
-              </div>
+          <div className="p-6 rounded-lg shadow-md bg-gray-800 text-center">
+            <div className="py-8">
+              <Youtube className="text-red-600 mx-auto mb-4" size={48} />
+              <h2 className="text-xl font-bold mb-2">Ready to analyze YouTube comments?</h2>
+              <p className="text-gray-400 mb-6">Enter a YouTube URL above to get started.</p>
+              <p className="text-gray-400">
+                You have <span className="text-white font-medium">{dailyUsage.remaining}</span> analyses remaining today.
+              </p>
             </div>
           </div>
         )}
       </main>
-
-      {/* Footer */}
+{/* 
+     
       <footer className="bg-gray-800 p-4 mt-8">
         <div className="container mx-auto text-center text-gray-400 text-sm">
-          <p>YouTube Comment Analyzer &copy; 2025. All rights reserved.</p>
-          <p className="mt-1">Built with React, Appwrite, and YouTube Data API.</p>
+     
+          <p className="mt-1">Audience Lens &copy; 2025. All rights reserved.</p>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }

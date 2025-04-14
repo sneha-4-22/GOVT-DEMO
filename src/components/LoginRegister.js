@@ -105,7 +105,7 @@ const LoginRegister = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Youtube className="text-red-600" />
-            <h1 className="text-xl font-bold">YouTube Comment Analyzer</h1>
+            <h1 className="text-xl font-bold">Audience Lens</h1>
           </div>
           <button 
             onClick={goBack}
@@ -182,7 +182,7 @@ const LoginRegister = () => {
                         type="text"
                         required={!isLogin}
                         className="pl-10 w-full p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-                        placeholder="John Doe"
+                        placeholder="Hi! {name} "
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                       />

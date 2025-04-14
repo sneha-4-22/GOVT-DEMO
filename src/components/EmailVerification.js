@@ -101,7 +101,7 @@ const EmailVerification = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Youtube className="text-red-600" />
-            <h1 className="text-xl font-bold">YouTube Comment Analyzer</h1>
+            <h1 className="text-xl font-bold">Audience Lens</h1>
           </div>
           <button 
             onClick={goToLogin}
