@@ -1,4 +1,4 @@
-import { Client, Databases, Account } from "appwrite";
+import { Client, Databases, Account, Query } from "appwrite";
 
 const client = new Client();
 client
@@ -65,6 +65,118 @@ export const clearAllSessions = async () => {
     return true;
   } catch (error) {
     console.error("Error clearing sessions:", error);
+    return false;
+  }
+};
+
+// Check and update daily usage limits for YouTube Comment Analyzer
+export const checkDailyLimit = async (userId) => {
+  try {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const response = await databases.listDocuments(
+      USERS_DATABASE_ID,
+      VIDEO_ANALYTICS_COLLECTION_ID,
+      [
+        Query.equal('user_id', userId),
+        Query.equal('last_analysis_date', today)
+      ]
+    );
+    
+    // Check the daily limit (3 analyses per day)
+    const MAX_DAILY_LIMIT = 3;
+    let usedToday = 0;
+    
+    if (response.documents.length > 0) {
+      // Get the document with the highest count for today
+      const todayDoc = response.documents.reduce((prev, current) => {
+        return (prev.daily_analysis_count > current.daily_analysis_count) 
+          ? prev 
+          : current;
+      });
+      
+      usedToday = todayDoc.daily_analysis_count || 0;
+    }
+    
+    const remaining = MAX_DAILY_LIMIT - usedToday;
+    
+    return {
+      allowed: remaining > 0,
+      used: usedToday,
+      remaining: remaining,
+      message: remaining <= 0 ? "You've reached your daily limit of 3 video analyses" : ""
+    };
+  } catch (error) {
+    console.error("Error checking daily limit:", error);
+    // If error occurs, allow the analysis but log the error
+    return {
+      allowed: true,
+      used: 0,
+      remaining: 3,
+      message: "Unable to check usage limit"
+    };
+  }
+};
+
+// Update the analysis count after successful analysis
+export const updateAnalysisCount = async (userId) => {
+  try {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const response = await databases.listDocuments(
+      USERS_DATABASE_ID,
+      VIDEO_ANALYTICS_COLLECTION_ID,
+      [
+        Query.equal('user_id', userId),
+        Query.equal('last_analysis_date', today)
+      ]
+    );
+    
+    let currentCount = 0;
+    let documentId = null;
+    
+    if (response.documents.length > 0) {
+      // Get the document with the highest count for today
+      const todayDoc = response.documents.reduce((prev, current) => {
+        return (prev.daily_analysis_count > current.daily_analysis_count) 
+          ? prev 
+          : current;
+      });
+      
+      currentCount = todayDoc.daily_analysis_count || 0;
+      documentId = todayDoc.$id;
+    }
+    
+    if (documentId) {
+      // Update existing document
+      await databases.updateDocument(
+        USERS_DATABASE_ID,
+        VIDEO_ANALYTICS_COLLECTION_ID,
+        documentId,
+        {
+          last_analysis_date: today,
+          daily_analysis_count: currentCount + 1
+        }
+      );
+    } else {
+      // Create a new tracking document if none exists for today
+      await databases.createDocument(
+        USERS_DATABASE_ID,
+        VIDEO_ANALYTICS_COLLECTION_ID,
+        'unique()',
+        {
+          user_id: userId,
+          last_analysis_date: today,
+          daily_analysis_count: 1,
+          title: "Usage Tracking", // Adding a title for better identification in database
+          content: "Daily usage tracking record" // Optional descriptive content
+        }
+      );
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating analysis count:", error);
     return false;
   }
 };

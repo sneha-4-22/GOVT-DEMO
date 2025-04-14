@@ -1,15 +1,16 @@
 // src/components/Dashboard.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { 
   Search, Download, Youtube, MessageSquare, ThumbsUp, 
-  Eye, Calendar, User, Clock, RefreshCw, AlertTriangle, LogOut
+  Eye, Calendar, User, Clock, RefreshCw, AlertTriangle, LogOut,
+  Info, HelpCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-
 import { useNavigate } from 'react-router-dom';
+import { checkDailyLimit, updateAnalysisCount } from '../appwrite'; // Import the Appwrite helper functions
 
 function Dashboard() {
   const [videoUrl, setVideoUrl] = useState('');
@@ -21,6 +22,7 @@ function Dashboard() {
   const [sentimentData, setSentimentData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [csvContent, setCsvContent] = useState('');
+  const [dailyUsage, setDailyUsage] = useState({ allowed: true, used: 0, remaining: 3, message: '' });
   
   const user = useUser();
   const navigate = useNavigate();
@@ -34,6 +36,22 @@ function Dashboard() {
   
   const API_URL = 'http://localhost:4100'; // Replace with your API URL
 
+  // Check daily usage limit on component mount
+  useEffect(() => {
+    const checkUsage = async () => {
+      if (user.current && user.current.$id) {
+        try {
+          const usageData = await checkDailyLimit(user.current.$id);
+          setDailyUsage(usageData);
+        } catch (err) {
+          console.error("Error checking usage limits:", err);
+        }
+      }
+    };
+    
+    checkUsage();
+  }, [user.current]);
+
   const handleLogout = async () => {
     await user.logout();
     navigate('/');
@@ -43,6 +61,19 @@ function Dashboard() {
     e.preventDefault();
     if (!videoUrl || (!videoUrl.includes('youtube.com/') && !videoUrl.includes('youtu.be/'))) {
       setError('Please enter a valid YouTube URL');
+      return;
+    }
+
+    // Check if user is logged in
+    if (!user.current) {
+      setError('You must be logged in to analyze videos');
+      navigate('/login');
+      return;
+    }
+
+    // Check daily usage limit
+    if (!dailyUsage.allowed) {
+      setError(dailyUsage.message || 'You have reached your daily limit');
       return;
     }
     
@@ -58,6 +89,7 @@ function Dashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.current ? user.current.jwt : ''}`
         },
         body: JSON.stringify({ videoUrl }),
       });
@@ -73,6 +105,13 @@ function Dashboard() {
       setAnalysis(data.analysis);
       setSentimentData(data.sentimentData);
       setCsvContent(data.csvContent);
+      
+      // Update usage count after successful analysis
+      if (user.current && user.current.$id) {
+        await updateAnalysisCount(user.current.$id);
+        const updatedUsage = await checkDailyLimit(user.current.$id);
+        setDailyUsage(updatedUsage);
+      }
       
     } catch (err) {
       setError(err.message || 'Failed to fetch data. Please try again.');
@@ -128,6 +167,7 @@ function Dashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.current ? user.current.jwt : ''}`
         },
         body: JSON.stringify({ 
           csvContent,
@@ -201,6 +241,36 @@ function Dashboard() {
     return null;
   };
   
+  // Helper function to render usage indicator
+  const renderUsageIndicator = () => {
+    // Calculate the usage percentage for the progress bar
+    const usedPercentage = ((3 - dailyUsage.remaining) / 3) * 100;
+    
+    // Determine the color of the progress bar based on usage
+    let progressColor = 'bg-green-500';
+    if (usedPercentage >= 66) {
+      progressColor = 'bg-red-500';
+    } else if (usedPercentage >= 33) {
+      progressColor = 'bg-yellow-500';
+    }
+    
+    return (
+      <div className="mt-3">
+        <div className="flex justify-between items-center mb-1 text-sm">
+          <span className="font-medium">Daily Usage: {3 - dailyUsage.remaining}/3</span>
+          <span className="text-gray-400">{dailyUsage.remaining} analyses remaining</span>
+        </div>
+        <div className="h-2 w-full bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${progressColor} transition-all duration-500`} 
+            style={{ width: `${usedPercentage}%` }}
+          ></div>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">Limit resets at midnight UTC</p>
+      </div>
+    );
+  };
+  
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
@@ -235,15 +305,19 @@ function Dashboard() {
               className="flex-grow p-2 rounded border bg-gray-700 border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
+              disabled={!dailyUsage.allowed || isLoading}
             />
             <button 
               type="submit" 
-              className={`px-4 py-2 rounded ${isLoading ? 'bg-gray-500' : 'bg-red-600 hover:bg-red-700'} text-white font-medium transition`}
-              disabled={isLoading}
+              className={`px-4 py-2 rounded ${!dailyUsage.allowed ? 'bg-gray-500 cursor-not-allowed' : isLoading ? 'bg-gray-500' : 'bg-red-600 hover:bg-red-700'} text-white font-medium transition`}
+              disabled={!dailyUsage.allowed || isLoading}
             >
               {isLoading ? <RefreshCw className="animate-spin mx-auto" /> : 'Analyze'}
             </button>
           </form>
+          
+          {/* Daily Usage Progress Bar */}
+          {renderUsageIndicator()}
           
           {error && (
             <div className="mt-4 p-3 bg-red-900/30 text-red-400 rounded flex items-center gap-2">
@@ -495,7 +569,7 @@ function Dashboard() {
                   </div>
                   
                   <button 
-                    onClick={downloadCommentsAsCsv}
+                    onClick={downloadCsvFromServer} // Using server-side download as primary method
                     className="flex items-center gap-2 px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
                     disabled={comments.length === 0}
                   >
@@ -542,7 +616,70 @@ function Dashboard() {
             </div>
           </>
         )}
+
+        {/* Help & Information Section */}
+        {!videoDetails && (
+          <div className="p-6 rounded-lg shadow-md bg-gray-800">
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle className="text-blue-500" />
+              <h2 className="text-xl font-bold">How to Use</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="rounded bg-gray-700 p-4">
+                <h3 className="font-medium text-lg mb-2">Getting Started</h3>
+                <ol className="list-decimal list-inside space-y-2 text-gray-300">
+                  <li>Paste a YouTube video URL in the input field above</li>
+                  <li>Click the "Analyze" button to process the video's comments</li>
+                  <li>View sentiment analysis, key themes, and viewer feedback</li>
+                  <li>Search through comments or download them as a CSV file</li>
+                </ol>
+              </div>
+              
+              <div className="rounded bg-gray-700 p-4">
+                <h3 className="font-medium text-lg mb-2">Usage Limits</h3>
+                <p className="text-gray-300 mb-2">
+                  You can analyze up to <strong>3 videos per day</strong> with your account.
+                </p>
+                <p className="text-gray-300">
+                  Usage limits reset at midnight UTC. Currently you have 
+                  <strong> {dailyUsage.remaining} analyses</strong> remaining today.
+                </p>
+              </div>
+              
+              <div className="rounded bg-gray-700 p-4">
+                <h3 className="font-medium text-lg mb-2">Analytics Features</h3>
+                <ul className="space-y-2 text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Sentiment analysis of viewer comments (positive, neutral, negative)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Identification of key themes and frequently asked questions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Summary of positive feedback and areas for improvement
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Detailed viewer suggestions with implementation strategies
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 p-4 mt-8">
+        <div className="container mx-auto text-center text-gray-400 text-sm">
+          <p>YouTube Comment Analyzer &copy; 2025. All rights reserved.</p>
+          <p className="mt-1">Built with React, Appwrite, and YouTube Data API.</p>
+        </div>
+      </footer>
     </div>
   );
 }
