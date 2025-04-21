@@ -6,7 +6,7 @@ import LoginRegister from './components/LoginRegister';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import EmailVerification from './components/EmailVerification';
-
+import PaymentSuccess from './components/PaymentSuccess';
 function App() {
   return (
     <Router>
@@ -26,7 +26,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
+           <Route path="/payment-success" element={<PaymentSuccess />} />
           {/* Catch all other routes */}
           <Route path="*" element={<LandingPage />} />
         </Routes>

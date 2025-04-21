@@ -1,4 +1,3 @@
-// src/components/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer 
@@ -6,11 +5,12 @@ import {
 import { 
   Search, Download, Youtube, MessageSquare, ThumbsUp, 
   Eye, Calendar, User, Clock, RefreshCw, AlertTriangle, LogOut,
-  Info, HelpCircle
+  Info, HelpCircle, Crown
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { checkDailyLimit, updateAnalysisCount } from '../appwrite'; // Import the Appwrite helper functions
+import { checkPremiumSubscription } from './RazorpayService'; // Import premium check function
 
 function Dashboard() {
   const [videoUrl, setVideoUrl] = useState('');
@@ -22,7 +22,13 @@ function Dashboard() {
   const [sentimentData, setSentimentData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [csvContent, setCsvContent] = useState('');
-  const [dailyUsage, setDailyUsage] = useState({ allowed: true, used: 0, remaining: 3, message: '' });
+  const [monthlyUsage, setMonthlyUsage] = useState({ allowed: true, used: 0, remaining: 3, message: '' });
+  const [premiumStatus, setPremiumStatus] = useState({
+    isPremium: false,
+    loading: true,
+    daysRemaining: 0,
+    expiryDate: null
+  });
   
   const user = useUser();
   const navigate = useNavigate();
@@ -34,23 +40,51 @@ function Dashboard() {
     'Negative': '#EF4444'
   };
   
-  const API_URL = 'http://localhost:4100'; // Replace with your API URL
-
-  // Check daily usage limit on component mount
-  useEffect(() => {
-    const checkUsage = async () => {
-      if (user.current && user.current.$id) {
-        try {
+  const API_URL = 'https://server-5mbo.onrender.com'; 
+useEffect(() => {
+  const checkUserStatus = async () => {
+    if (user.current && user.current.$id) {
+      try {
+        // Force refresh premium status on page load
+        const premiumData = await checkPremiumSubscription(user.current.$id);
+        setPremiumStatus({
+          isPremium: premiumData.isPremium,
+          loading: false,
+          daysRemaining: premiumData.daysRemaining || 0,
+          expiryDate: premiumData.expiryDate
+        });
+        
+        // If premium, set unlimited usage
+        if (premiumData.isPremium) {
+          setMonthlyUsage({
+            allowed: true,
+            used: 0,
+            remaining: Infinity,
+            message: 'Premium users have unlimited access'
+          });
+        } else {
+          // For free users, check usage limits
           const usageData = await checkDailyLimit(user.current.$id);
-          setDailyUsage(usageData);
-        } catch (err) {
-          console.error("Error checking usage limits:", err);
+          setMonthlyUsage(usageData);
         }
+      } catch (err) {
+        console.error("Error checking user status:", err);
+        // Default to checking usage limits if premium check fails
+        const usageData = await checkDailyLimit(user.current.$id);
+        setMonthlyUsage(usageData);
       }
-    };
-    
-    checkUsage();
-  }, [user.current]);
+    }
+  };
+  
+  checkUserStatus();
+  
+  // Add this: Check if we're coming from payment success page
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('paymentSuccess')) {
+    // Force check premium status again after a short delay
+    setTimeout(checkUserStatus, 1000);
+  }
+}, [user.current]);
 
   const handleLogout = async () => {
     await user.logout();
@@ -71,9 +105,9 @@ function Dashboard() {
       return;
     }
 
-    // Check daily usage limit
-    if (!dailyUsage.allowed) {
-      setError(dailyUsage.message || 'You have reached your daily limit');
+    // Check daily usage limit (only for non-premium users)
+    if (!premiumStatus.isPremium && !monthlyUsage.allowed) {
+      setError(monthlyUsage.message || 'You have reached your monthly limit. Upgrade to Premium for unlimited access.');
       return;
     }
     
@@ -106,11 +140,11 @@ function Dashboard() {
       setSentimentData(data.sentimentData);
       setCsvContent(data.csvContent);
       
-      // Update usage count after successful analysis
-      if (user.current && user.current.$id) {
+      // Update usage count after successful analysis (only for non-premium users)
+      if (user.current && user.current.$id && !premiumStatus.isPremium) {
         await updateAnalysisCount(user.current.$id);
         const updatedUsage = await checkDailyLimit(user.current.$id);
-        setDailyUsage(updatedUsage);
+        setMonthlyUsage(updatedUsage);
       }
       
     } catch (err) {
@@ -243,8 +277,31 @@ function Dashboard() {
   
   // Helper function to render usage indicator
   const renderUsageIndicator = () => {
+    // For premium users, show premium badge instead of usage bar
+    if (premiumStatus.isPremium) {
+      return (
+        <div className="mt-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center bg-gradient-to-r from-red-700 to-red-500 px-3 py-2 rounded-full">
+              <Crown className="text-yellow-300 mr-2" size={16} />
+              <span className="font-medium text-white">Premium Active</span>
+            </div>
+            {premiumStatus.daysRemaining > 0 && (
+              <span className="text-gray-400 text-sm">
+                {premiumStatus.daysRemaining} days remaining
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-gray-400 mt-2">
+            Enjoy unlimited video analyses with your premium membership
+          </p>
+        </div>
+      );
+    }
+    
+    // For free users, show the usage progress bar
     // Calculate the usage percentage for the progress bar
-    const usedPercentage = ((3 - dailyUsage.remaining) / 3) * 100;
+    const usedPercentage = ((3 - monthlyUsage.remaining) / 3) * 100;
     
     // Determine the color of the progress bar based on usage
     let progressColor = 'bg-green-500';
@@ -254,11 +311,14 @@ function Dashboard() {
       progressColor = 'bg-yellow-500';
     }
     
+    // Get current month name for display
+    const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+    
     return (
       <div className="mt-3">
         <div className="flex justify-between items-center mb-1 text-sm">
-          <span className="font-medium">Daily Usage: {3 - dailyUsage.remaining}/3</span>
-          <span className="text-gray-400">{dailyUsage.remaining} analyses remaining</span>
+          <span className="font-medium">Monthly Usage: {3 - monthlyUsage.remaining}/3</span>
+          <span className="text-gray-400">{monthlyUsage.remaining} analyses remaining</span>
         </div>
         <div className="h-2 w-full bg-gray-700 rounded-full overflow-hidden">
           <div 
@@ -266,7 +326,15 @@ function Dashboard() {
             style={{ width: `${usedPercentage}%` }}
           ></div>
         </div>
-        <p className="text-xs text-gray-400 mt-1">Limit resets at midnight UTC</p>
+        <div className="flex justify-between mt-1">
+          <p className="text-xs text-gray-400">Limit resets at the end of {currentMonthName}</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="text-xs text-red-400 hover:text-red-300 transition"
+          >
+            Upgrade to Premium
+          </button>
+        </div>
       </div>
     );
   };
@@ -281,8 +349,16 @@ function Dashboard() {
             <h1 className="text-xl font-bold">Audience Lens</h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-400">
-              Logged in as: <span className="text-white">{user.current ? user.current.name : ''}</span>
+            <div className="flex items-center gap-2 text-sm">
+              {premiumStatus.isPremium && (
+                <div className="flex items-center bg-gradient-to-r from-red-700 to-red-500 px-3 py-1 rounded-full mr-2">
+                  <Crown className="text-yellow-300 mr-1" size={14} />
+                  <span className="font-medium text-white">Premium</span>
+                </div>
+              )}
+              <span className="text-gray-400">
+                Logged in as: <span className="text-white">{user.current ? user.current.name : ''}</span>
+              </span>
             </div>
             <button 
               onClick={handleLogout}
@@ -305,24 +381,32 @@ function Dashboard() {
               className="flex-grow p-2 rounded border bg-gray-700 border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              disabled={!dailyUsage.allowed || isLoading}
+              disabled={(!premiumStatus.isPremium && !monthlyUsage.allowed) || isLoading}
             />
             <button 
               type="submit" 
-              className={`px-4 py-2 rounded ${!dailyUsage.allowed ? 'bg-gray-500 cursor-not-allowed' : isLoading ? 'bg-gray-500' : 'bg-red-600 hover:bg-red-700'} text-white font-medium transition`}
-              disabled={!dailyUsage.allowed || isLoading}
+              className={`px-4 py-2 rounded ${(!premiumStatus.isPremium && !monthlyUsage.allowed) ? 'bg-gray-500 cursor-not-allowed' : isLoading ? 'bg-gray-500' : 'bg-red-600 hover:bg-red-700'} text-white font-medium transition`}
+              disabled={(!premiumStatus.isPremium && !monthlyUsage.allowed) || isLoading}
             >
               {isLoading ? <RefreshCw className="animate-spin mx-auto" /> : 'Analyze'}
             </button>
           </form>
           
-          {/* Daily Usage Progress Bar */}
+          {/* Usage Indicator or Premium Badge */}
           {renderUsageIndicator()}
           
           {error && (
             <div className="mt-4 p-3 bg-red-900/30 text-red-400 rounded flex items-center gap-2">
               <AlertTriangle size={18} />
               <p>{error}</p>
+              {!premiumStatus.isPremium && error.includes('limit') && (
+                <button 
+                  onClick={() => navigate('/')}
+                  className="ml-auto px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-sm transition"
+                >
+                  Upgrade to Premium
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -625,7 +709,7 @@ function Dashboard() {
               <h2 className="text-xl font-bold mb-2">Ready to analyze YouTube comments?</h2>
               <p className="text-gray-400 mb-6">Enter a YouTube URL above to get started.</p>
               <p className="text-gray-400">
-                You have <span className="text-white font-medium">{dailyUsage.remaining}</span> analyses remaining today.
+                You have <span className="text-white font-medium">{monthlyUsage.remaining}</span> analyses remaining this month.
               </p>
             </div>
           </div>

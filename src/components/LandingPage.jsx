@@ -1,26 +1,115 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../contexts/UserContext';
 import { 
   BarChart3, TrendingUp, Lightbulb, ArrowRight, ChevronRight,
-  MessageSquare, Search, Download, Youtube 
+  MessageSquare, Search, Download, Youtube, Crown, Check, X
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { checkPremiumSubscription } from './RazorpayService';
+import PaymentSelector from './PaymentSelector';
 import dashboardPreview from './image.png';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const user = useUser();
+  const { current: user } = useUser();
+  const [showPaymentSelector, setShowPaymentSelector] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState({
+    isPremium: false,
+    loading: true
+  });
+
+  useEffect(() => {
+    // Check subscription status if user is logged in
+    if (user) {
+      checkUserSubscription();
+    } else {
+      setSubscriptionStatus({
+        isPremium: false,
+        loading: false
+      });
+    }
+  }, [user]);
+
+  const checkUserSubscription = async () => {
+    if (!user) return;
+    
+    try {
+      const result = await checkPremiumSubscription(user.$id);
+      setSubscriptionStatus({
+        isPremium: result.isPremium,
+        subscription: result.subscription,
+        loading: false,
+        daysRemaining: result.daysRemaining,
+        expiryDate: result.expiryDate
+      });
+    } catch (error) {
+      console.error("Error checking subscription:", error);
+      setSubscriptionStatus({
+        isPremium: false,
+        loading: false
+      });
+    }
+  };
 
   const onGetStarted = () => {
-    if (user.current) {
+    if (user) {
       navigate('/dashboard');
     } else {
       navigate('/login');
     }
   };
 
+  const handlePremiumSubscription = () => {
+    // If not logged in, redirect to signup
+    if (!user) {
+      navigate('/signup');
+      return;
+    }
+    
+    // If already premium, go to dashboard
+    if (subscriptionStatus.isPremium) {
+      navigate('/dashboard');
+      return;
+    }
+    
+    // Show payment selector modal
+    setShowPaymentSelector(true);
+  };
+
+  const handlePaymentSuccess = async (result) => {
+    // Update the subscription status
+    await checkUserSubscription();
+    alert("Congratulations! You are now a premium member.");
+    navigate('/dashboard');
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentSelector(false);
+  };
+
+  // Payment selector modal
+  const PaymentModal = ({ onClose }) => (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-lg shadow-2xl max-w-md w-full relative">
+        <button 
+          className="absolute top-2 right-2 text-gray-400 hover:text-white p-2" 
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+        <PaymentSelector 
+        user={user}
+          onSuccess={handlePaymentSuccess} 
+          onCancel={handlePaymentCancel} 
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {showPaymentSelector && <PaymentModal onClose={() => setShowPaymentSelector(false)} />}
+      
       {/* Header */}
       <header className="p-4 bg-gray-800 shadow-md fixed w-full top-0 z-10">
         <div className="container mx-auto flex justify-between items-center">
@@ -29,13 +118,21 @@ const LandingPage = () => {
             <h1 className="text-xl font-bold">Audience Lens</h1>
           </div>
           <div className="flex items-center space-x-4">
-            {user.current ? (
-              <button 
-                onClick={() => navigate('/dashboard')}
-                className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 transition flex items-center gap-2"
-              >
-                Dashboard <ArrowRight size={16} />
-              </button>
+            {user ? (
+              <div className="flex items-center space-x-2">
+                {subscriptionStatus.isPremium && (
+                  <div className="flex items-center bg-gradient-to-r from-red-700 to-red-500 px-3 py-1 rounded-full">
+                    <Crown className="text-yellow-300 mr-1" size={16} />
+                    <span className="text-sm font-medium text-white">Premium</span>
+                  </div>
+                )}
+                <button 
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 transition flex items-center gap-2"
+                >
+                  Dashboard <ArrowRight size={16} />
+                </button>
+              </div>
             ) : (
               <div className="flex items-center space-x-2">
                 <button 
@@ -94,10 +191,10 @@ const LandingPage = () => {
                   Get Started <ChevronRight size={20} />
                 </button>
                 <a 
-                  href="#features"
+                  href="#pricing"
                   className="px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition flex items-center justify-center gap-2 text-lg font-medium"
                 >
-                  Learn More
+                  View Plans
                 </a>
               </div>
             </div>
@@ -239,6 +336,132 @@ const LandingPage = () => {
           </div>
         </section>
         
+        {/* Pricing Section */}
+        <section id="pricing" className="py-16 bg-gray-800">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-4">Choose Your Plan</h2>
+            <p className="text-xl text-center text-gray-300 mb-12 max-w-2xl mx-auto">
+              Select the plan that best fits your content creation needs
+            </p>
+            
+            <div className="flex flex-col md:flex-row gap-8 justify-center max-w-4xl mx-auto">
+              {/* Free Plan */}
+              <div className="bg-gray-700 rounded-lg shadow-lg p-6 flex flex-col w-full md:w-1/2 border-2 border-gray-600">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-2">Free</h3>
+                  <div className="flex items-end mb-4">
+                    <span className="text-4xl font-bold">$0</span>
+                    <span className="text-gray-400 ml-1">/month</span>
+                  </div>
+                  <p className="text-gray-300">Perfect for casual creators just getting started</p>
+                </div>
+                
+                <div className="flex-grow">
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Analyze up to 3 videos per month</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Basic sentiment analysis</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Key themes identification</span>
+                    </li>
+                    <li className="flex items-start">
+                      <X size={20} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-400">Advanced analytics</span>
+                    </li>
+                    <li className="flex items-start">
+                      <X size={20} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-400">Custom reports</span>
+                    </li>
+                    <li className="flex items-start">
+                      <X size={20} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-400">Priority support</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <button 
+                  onClick={onGetStarted}
+                  className="w-full py-3 rounded-lg bg-gray-600 hover:bg-gray-500 transition font-medium"
+                >
+                  Get Started
+                </button>
+              </div>
+              
+              {/* Premium Plan */}
+              <div className="bg-gray-700 rounded-lg shadow-lg p-6 flex flex-col w-full md:w-1/2 border-2 border-red-500 relative">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  RECOMMENDED
+                </div>
+                
+                <div className="mb-6">
+                  <div className="flex items-center mb-2">
+                    <h3 className="text-2xl font-bold">Premium</h3>
+                    <Crown className="text-yellow-400 ml-2" size={20} />
+                  </div>
+                  <div className="flex items-end mb-4">
+                    <span className="text-4xl font-bold">$15</span>
+                    <span className="text-gray-400 ml-1">/month</span>
+                  </div>
+                  <p className="text-gray-300">For serious creators who want deep audience insights</p>
+                </div>
+                
+                <div className="flex-grow">
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Unlimited video analysis</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Advanced sentiment analysis</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Comprehensive theme extraction</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Audience growth recommendations</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Custom PDF reports</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check size={20} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      <span>Priority email support</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <button 
+                  onClick={handlePremiumSubscription}
+                  className={`w-full py-3 rounded-lg font-medium flex items-center justify-center ${
+                    subscriptionStatus.isPremium 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  } transition`}
+                >
+                  {subscriptionStatus.isPremium ? (
+                    <>
+                      <Check className="mr-2" size={18} />
+                      {subscriptionStatus.daysRemaining > 0 
+                        ? `Active (${subscriptionStatus.daysRemaining} days left)` 
+                        : 'Currently Active'}
+                    </>
+                  ) : user ? 'Upgrade Now' : 'Sign Up'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+        
         {/* Call to Action */}
         <section className="py-16 bg-gradient-to-r from-red-900 to-red-700">
           <div className="container mx-auto px-4 text-center">
@@ -247,10 +470,10 @@ const LandingPage = () => {
               Start analyzing your YouTube comments today and transform viewer feedback into content opportunities.
             </p>
             <button 
-              onClick={onGetStarted}
+              onClick={user ? (subscriptionStatus.isPremium ? () => navigate('/dashboard') : handlePremiumSubscription) : onGetStarted}
               className="px-8 py-4 bg-white text-red-600 rounded-lg text-xl font-bold hover:bg-gray-100 transition shadow-lg"
             >
-              Get Started Now
+              {user ? (subscriptionStatus.isPremium ? 'Go to Dashboard' : 'Get Premium') : 'Get Started Now'}
             </button>
           </div>
         </section>

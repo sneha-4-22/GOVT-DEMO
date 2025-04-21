@@ -69,45 +69,48 @@ export const clearAllSessions = async () => {
   }
 };
 
-// Check and update daily usage limits for YouTube Comment Analyzer
+// Check and update monthly usage limits for YouTube Comment Analyzer
 export const checkDailyLimit = async (userId) => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1; // JS months are 0-indexed
+    const currentYear = currentDate.getFullYear();
+    const monthYear = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`; // YYYY-MM format
     
     const response = await databases.listDocuments(
       USERS_DATABASE_ID,
       VIDEO_ANALYTICS_COLLECTION_ID,
       [
         Query.equal('user_id', userId),
-        Query.equal('last_analysis_date', today)
+        Query.equal('month_year', monthYear)
       ]
     );
     
-    // Check the daily limit (3 analyses per day)
-    const MAX_DAILY_LIMIT = 3;
-    let usedToday = 0;
+    // Check the monthly limit (3 analyses per month)
+    const MAX_MONTHLY_LIMIT = 3;
+    let usedThisMonth = 0;
     
     if (response.documents.length > 0) {
-      // Get the document with the highest count for today
-      const todayDoc = response.documents.reduce((prev, current) => {
-        return (prev.daily_analysis_count > current.daily_analysis_count) 
+      // Get the document with the highest count for this month
+      const monthDoc = response.documents.reduce((prev, current) => {
+        return (prev.monthly_analysis_count > current.monthly_analysis_count) 
           ? prev 
           : current;
       });
       
-      usedToday = todayDoc.daily_analysis_count || 0;
+      usedThisMonth = monthDoc.monthly_analysis_count || 0;
     }
     
-    const remaining = MAX_DAILY_LIMIT - usedToday;
+    const remaining = MAX_MONTHLY_LIMIT - usedThisMonth;
     
     return {
       allowed: remaining > 0,
-      used: usedToday,
+      used: usedThisMonth,
       remaining: remaining,
-      message: remaining <= 0 ? "You've reached your daily limit of 3 video analyses" : ""
+      message: remaining <= 0 ? "You've reached your monthly limit of 3 video analyses" : ""
     };
   } catch (error) {
-    console.error("Error checking daily limit:", error);
+    console.error("Error checking monthly limit:", error);
     // If error occurs, allow the analysis but log the error
     return {
       allowed: true,
@@ -121,14 +124,18 @@ export const checkDailyLimit = async (userId) => {
 // Update the analysis count after successful analysis
 export const updateAnalysisCount = async (userId) => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1; // JS months are 0-indexed
+    const currentYear = currentDate.getFullYear();
+    const monthYear = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`; // YYYY-MM format
+    const fullDate = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD for tracking last analysis
     
     const response = await databases.listDocuments(
       USERS_DATABASE_ID,
       VIDEO_ANALYTICS_COLLECTION_ID,
       [
         Query.equal('user_id', userId),
-        Query.equal('last_analysis_date', today)
+        Query.equal('month_year', monthYear)
       ]
     );
     
@@ -136,15 +143,15 @@ export const updateAnalysisCount = async (userId) => {
     let documentId = null;
     
     if (response.documents.length > 0) {
-      // Get the document with the highest count for today
-      const todayDoc = response.documents.reduce((prev, current) => {
-        return (prev.daily_analysis_count > current.daily_analysis_count) 
+      // Get the document with the highest count for this month
+      const monthDoc = response.documents.reduce((prev, current) => {
+        return (prev.monthly_analysis_count > current.monthly_analysis_count) 
           ? prev 
           : current;
       });
       
-      currentCount = todayDoc.daily_analysis_count || 0;
-      documentId = todayDoc.$id;
+      currentCount = monthDoc.monthly_analysis_count || 0;
+      documentId = monthDoc.$id;
     }
     
     if (documentId) {
@@ -154,22 +161,24 @@ export const updateAnalysisCount = async (userId) => {
         VIDEO_ANALYTICS_COLLECTION_ID,
         documentId,
         {
-          last_analysis_date: today,
-          daily_analysis_count: currentCount + 1
+          last_analysis_date: fullDate,
+          month_year: monthYear,
+          monthly_analysis_count: currentCount + 1
         }
       );
     } else {
-      // Create a new tracking document if none exists for today
+      // Create a new tracking document if none exists for this month
       await databases.createDocument(
         USERS_DATABASE_ID,
         VIDEO_ANALYTICS_COLLECTION_ID,
         'unique()',
         {
           user_id: userId,
-          last_analysis_date: today,
-          daily_analysis_count: 1,
-          title: "Usage Tracking", // Adding a title for better identification in database
-          content: "Daily usage tracking record" // Optional descriptive content
+          last_analysis_date: fullDate,
+          month_year: monthYear,
+          monthly_analysis_count: 1,
+          title: "Monthly Usage Tracking", // Adding a title for better identification in database
+          content: "Monthly usage tracking record" // Optional descriptive content
         }
       );
     }
