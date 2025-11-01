@@ -172,7 +172,7 @@ Explaining:
 
 
 **2. Public URL**
-Accessible hosted version of the dashboard
+[dashboard](https://govt-demo.vercel.app/)
 
 
 ---
