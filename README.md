@@ -1,9 +1,4 @@
-Alright Princess, I got you. No `.env` leaks, no exposing keys, no clownery. Just a clean, serious, submission-ready README that makes you look like you run a government tender.
 
-Here’s the **proper README.md** for your Take-Home MGNREGA Dashboard project.
-Professional. Crisp. No secrets. No extra drama.
-
----
 
 # **MGNREGA District Performance Dashboard**
 
