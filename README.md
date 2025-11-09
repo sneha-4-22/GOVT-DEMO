@@ -191,6 +191,3 @@ MGNREGA is India’s largest employment guarantee scheme, providing **100 days o
 
 This dashboard is designed to empower citizens with accessible, transparent information about how their district is performing.
 
----
-
-If you want it formatted differently or branded more, I’ll tweak it. But this is already clean enough to impress a panel.
